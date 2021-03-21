@@ -95,6 +95,7 @@ class GameState:
 			if is_Valid:
 				if not checker.king and ((oldrow+dir[0] == 7 and playercolor == "BLACK") or (oldrow+dir[0] == 0 and playercolor == "WHITE")):
 					new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
+					#print("madeking")
 					captureMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
 				else:
 					caplist,capflag = self.recursive_check(regularDirs,captureDirs,new_state[oldrow+dir[0]][oldcol+dir[1]],new_state,playercolor)
@@ -110,6 +111,7 @@ class GameState:
 				if is_Valid:
 					if not checker.king and ((oldrow+dir[0] == 7 and playercolor == "BLACK") or (oldrow+dir[0] == 0 and playercolor == "WHITE")):
 						new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
+						#print("madeking")
 					regularMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
 		# must take capture move if possible
 		if captureMoves:
@@ -142,8 +144,8 @@ class GameState:
 			#  \ direction or / direction
 			row_diff = row_diff // 2
 			col_diff = (col - oldcol) // 2
-			print(oldrow,oldcol,row,col,row_diff,col_diff)
-			print(state[oldrow+row_diff][oldcol+col_diff].piece.lower(),state[oldrow][oldcol].piece.lower())
+			#print(oldrow,oldcol,row,col,row_diff,col_diff)
+			#print(state[oldrow+row_diff][oldcol+col_diff].piece.lower(),state[oldrow][oldcol].piece.lower())
 			if state[oldrow+row_diff][oldcol+col_diff].piece == '.' or (state[oldrow+row_diff][oldcol+col_diff].piece.lower() == state[oldrow][oldcol].piece.lower()):
 				return False,None
 			else:
@@ -169,8 +171,35 @@ class GameState:
 		return 1000
 
 	def computeHeuristic(self, state):
-		#  heurisitc = (len(self.checkers) - len(self.opponent_checkers)) * 50 + self.countSafecheckers() * 10 + len(self.checkers)
-		 return 1000
+		bp,wp,bkp,wkp = self.get_evaluation_count_on_board(state)
+		if self.color == "BLACK":
+			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = bp,bkp,wp,wkp
+		else:
+			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = wp,wkp,bp,bkp
+			
+		heurisitic = (checkers_count - opponent_checkers_count) * 50 + (checkers_king_count - opponent_checkers_king_count) * 100 + checkers_count
+		#print("heuristic",heurisitic)
+		return heurisitic
+
+	def get_evaluation_count_on_board(self,state):
+		#print("inside get all pieces")
+		black_piece_count,white_piece_count = 0,0
+		black_piece__king_count,white_piece_king_count = 0,0
+		for row in self.board:
+			for piece in row:
+				#print(piece.color)
+				if piece != EMPTY_SPOT:
+					if piece.piece == 'w':
+						white_piece_count = white_piece_count + 1
+					elif piece.piece == 'b':
+						black_piece_count = black_piece_count + 1
+					elif piece.piece == 'W':
+						white_piece_king_count = white_piece_king_count + 1
+					else:
+						black_piece__king_count = black_piece__king_count + 1
+				
+		#print(pieces)
+		return black_piece_count,white_piece_count,black_piece__king_count,white_piece_king_count
 
 
 class AiAgent:
@@ -180,6 +209,7 @@ class AiAgent:
 
 	def get_best_next_move(self,state,depthLimit):
 		next_move = self.alpha_beta(state,depthLimit)
+		#pprint(state.board)
 		return next_move
 		
 
@@ -193,24 +223,32 @@ class AiAgent:
 		self.minPruning = 0
 		self.depthLimit = depthLimit
 
-		v = self.maxValue(state.board, -1000, 1000, self.depthLimit)
-
+		v = self.maxValue(state.board, -10000000, 1000000, self.depthLimit)
+		#print(self.maxDepth)
+		#print(self.numNodes)
+		#print(depthLimit)
+		#print(is_jump)
 		return self.best_move
 
 	def maxValue(self, state, alpha, beta, depthLimit):
+		#print("depth max Limit",depthLimit)
+
 		# if state.terminal_test():
 		# 	return state.computeUtilityValue()
 		if depthLimit == 0:
+			#print("depthLimit max is 0")
 			return self.state.computeHeuristic(state)
 		self.currentDepth += 1
 		self.maxDepth = max(self.maxDepth, self.currentDepth)
+		
 		self.numNodes += 1
 
 		actionList = self.state.getActions(state,True)[0]
-		pprint(actionList)
+		#pprint(actionList)
 		v = -math.inf
 		if len(actionList) == 0:
-			return self.state.computeUtilityValue(state)
+			#print("actionList max is 0")
+			return self.state.computeHeuristic(state)
 		
 		for state,move in actionList:
 			# return captured checker if it is a capture move
@@ -220,6 +258,7 @@ class AiAgent:
 				v = next
 				# Keep track of the best move so far at the top level
 				if depthLimit == self.depthLimit:
+					#pprint(state)
 					self.best_move = move
 			
 			# alpha-beta max pruning
@@ -234,9 +273,11 @@ class AiAgent:
 		return v
 
 	def minValue(self, state, alpha, beta, depthLimit):
+		#print("depth min Limit",depthLimit)
 		# if state.terminalTest():
 		#     return state.computeUtilityValue()
 		if depthLimit == 0:
+			#print("depthLimit is 0")
 			return self.state.computeHeuristic(state)
 
 		# update statistics for the search
@@ -244,9 +285,11 @@ class AiAgent:
 		self.maxDepth = max(self.maxDepth, self.currentDepth)
 		self.numNodes += 1
 		actionList = self.state.getActions(state,False)[0]
+		#pprint(actionList)
 		v = math.inf
 		if len(actionList) == 0:
-			return self.state.computeUtilityValue(state)
+			#print("actionList is 0")
+			return self.state.computeHeuristic(state)
 		for state,moves in actionList:
 			next = self.maxValue(state, alpha, beta, depthLimit - 1)
 			
@@ -263,64 +306,12 @@ class AiAgent:
 		self.currentDepth -= 1
 		return v
 
-	
-	# def minimax(self,position, depth, max_player,color, opponent_color):
-	# 	if depth == 0 or position.winner() != None:
-	# 		print("start",position.evaluate())
-	# 		return position.evaluate(), position
-		
-	# 	if max_player:
-	# 		print("inside max")
-	# 		maxEval = float('-inf')
-	# 		best_move = None
-	# 		for move in self.get_all_moves(position, color):
-	# 			evaluation = self.minimax(move, depth-1, False,color,opponent_color)[0]
-	# 			print("max",evaluation)
-	# 			maxEval = max(maxEval, evaluation)
-	# 			if maxEval == evaluation:
-	# 				best_move = move
-	# 		print(maxEval)	        
-	# 		return maxEval, best_move
-	# 	else:
-	# 		print("inside min")
-	# 		minEval = float('inf')
-	# 		best_move = None
-	# 		for move in self.get_all_moves(position, opponent_color):
-	# 			evaluation = self.minimax(move, depth-1, True, color, opponent_color)[0]
-	# 			print("min", evaluation)
-	# 			minEval = min(minEval, evaluation)
-	# 			if minEval == evaluation:
-	# 				best_move = move
-	# 		print(minEval)
-	# 		return minEval, best_move
-
-	# def get_all_moves(self,board, color):
-	# 	moves = []
-	# 	#print("inside getallmoves")
-	# 	for piece in board.get_all_pieces(color):
-	# 		print(piece.color)
-	# 		valid_moves = board.get_valid_moves(piece)
-	# 		#print(valid_moves)
-	# 		for move, skip in valid_moves.items():
-	# 			print(move[0],move[1])
-	# 			temp_board = deepcopy(board)
-	# 			temp_piece = temp_board.get_piece(piece.row, piece.col)
-	# 			new_board = self.simulate_move(temp_piece, move, temp_board, skip)
-	# 			moves.append(new_board)
-	# 	return moves
-
-	# def simulate_move(self, move, board, piece):
-	# 	oldrow,oldcol,row,col = move
-	# 	board[row][col] = piece
-	# 	board[oldrow][oldcol] = Piece(oldrow,oldcol,'.')
-	# 	return board
-
 
 class Game:
 	def __init__(self):
-		start_time = time.time()
+		self.start_time = time.time()
 		self.inputs()
-		print(time.time() - start_time)
+		
 
 	def inputs(self):
 		f = open("input.txt","r")
@@ -343,17 +334,41 @@ class Game:
 	def playgame(self,board,color,remaining_playtime):
 		self.board = board
 		pprint(board)
-		if color == BLACK :
-			opponent_color = WHITE
+		if color == "BLACK" :
+			opponent_color = "WHITE"
 		else:
-			opponent_color = BLACK
+			opponent_color = "BLACK"
 
 		#print(self.board.winner())
 		#value, new_board = AiAgent().minimax(self.board,4,color,color,opponent_color)
 		max_player = AiAgent(self.board,color)
 		state = GameState(self.board,color,opponent_color)
-		next_move = max_player.get_best_next_move(state,1)
+		next_move = max_player.get_best_next_move(state,5)
 		print(next_move)
+		output = self.get_output_format(next_move)
+		print(time.time() - self.start_time)
+	
+	def get_output_format(self,next_move):
+		if len(next_move)>4:
+			is_jump = True
+		else:
+			is_jump = False
+		output = ""
+		if is_jump:
+			output = output + "J "
+		else:
+			output = output + "E "
+		for i in range(0,len(next_move)):
+			if i%2 == 0 :
+				output += chr(next_move[i] + 97) + str(next_move[i+1]) + " "
+			if i%4 == 3 and i<(len(next_move) - 2):
+				output = output + "\n"
+				if is_jump:
+					output = output + "J "
+				else:
+					output = output + "E "
+		print(output)
+		return output
 
 	#TODO
 	def winner():
