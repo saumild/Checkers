@@ -170,36 +170,54 @@ class GameState:
 		# utility = (len(self.checkers) - len(self.opponent_heckers)) * 500 + len(self.checkers) * 50
 		return 1000
 
-	def computeHeuristic(self, state):
-		bp,wp,bkp,wkp = self.get_evaluation_count_on_board(state)
+	def computeHeuristic1(self, state):
+		bp,wp,bkp,wkp,x,y = self.get_evaluation_count_on_board(state)
 		if self.color == "BLACK":
 			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = bp,bkp,wp,wkp
 		else:
 			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = wp,wkp,bp,bkp
-			
+
 		heurisitic = (checkers_count - opponent_checkers_count) * 50 + (checkers_king_count - opponent_checkers_king_count) * 100 + checkers_count
 		#print("heuristic",heurisitic)
 		return heurisitic
 
+	def computeHeuristic(self, state):
+		#pprint("compheuristic")
+		#pprint(state)
+		bp,wp,bkp,wkp,dbk,dwk = self.get_evaluation_count_on_board(state)
+		#print(bp,wp,bkp,wkp,dbk,dwk)
+		if self.color == "BLACK":
+			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count,dist_king = bp,bkp,wp,wkp,dbk
+		else:
+			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count,dist_king = wp,wkp,bp,bkp,dwk
+			
+		heurisitic = (checkers_count - opponent_checkers_count) * 0.32 + (checkers_king_count - opponent_checkers_king_count) * 0.32*2 + dist_king*0.7
+		#print("heuristic",heurisitic)
+		return heurisitic
+
 	def get_evaluation_count_on_board(self,state):
-		#print("inside get all pieces")
+		#print("evalcount")
+		#pprint(state)
 		black_piece_count,white_piece_count = 0,0
 		black_piece__king_count,white_piece_king_count = 0,0
-		for row in self.board:
+		dist_to_become_white_king,dist_to_become_black_king = 0,0
+		for row in state:
 			for piece in row:
 				#print(piece.color)
 				if piece != EMPTY_SPOT:
 					if piece.piece == 'w':
 						white_piece_count = white_piece_count + 1
+						dist_to_become_white_king = dist_to_become_white_king + (piece.row)
 					elif piece.piece == 'b':
 						black_piece_count = black_piece_count + 1
+						dist_to_become_black_king = dist_to_become_black_king + (8 - piece.row)
 					elif piece.piece == 'W':
 						white_piece_king_count = white_piece_king_count + 1
-					else:
+					elif piece.piece == 'B':
 						black_piece__king_count = black_piece__king_count + 1
 				
 		#print(pieces)
-		return black_piece_count,white_piece_count,black_piece__king_count,white_piece_king_count
+		return black_piece_count,white_piece_count,black_piece__king_count,white_piece_king_count,dist_to_become_black_king,dist_to_become_white_king
 
 
 class AiAgent:
@@ -222,8 +240,9 @@ class AiAgent:
 		self.maxPruning = 0
 		self.minPruning = 0
 		self.depthLimit = depthLimit
-
+		#heur = set()
 		v = self.maxValue(state.board, -10000000, 1000000, self.depthLimit)
+		#print(heur)
 		#print(self.maxDepth)
 		#print(self.numNodes)
 		#print(depthLimit)
@@ -232,11 +251,15 @@ class AiAgent:
 
 	def maxValue(self, state, alpha, beta, depthLimit):
 		#print("depth max Limit",depthLimit)
-
+		heuristic = None
 		# if state.terminal_test():
 		# 	return state.computeUtilityValue()
 		if depthLimit == 0:
 			#print("depthLimit max is 0")
+			#pprint(state)
+			#heuristic = self.state.computeHeuristic(state)
+			#print(heuristic)
+			#heur.add(heuristic)
 			return self.state.computeHeuristic(state)
 		self.currentDepth += 1
 		self.maxDepth = max(self.maxDepth, self.currentDepth)
@@ -244,10 +267,13 @@ class AiAgent:
 		self.numNodes += 1
 
 		actionList = self.state.getActions(state,True)[0]
-		#pprint(actionList)
+
 		v = -math.inf
 		if len(actionList) == 0:
 			#print("actionList max is 0")
+			#heuristic = self.state.computeHeuristic(state)
+			#print("actionList == 0",move,heuristic)
+			#heur.add(heuristic)
 			return self.state.computeHeuristic(state)
 		
 		for state,move in actionList:
@@ -278,6 +304,8 @@ class AiAgent:
 		#     return state.computeUtilityValue()
 		if depthLimit == 0:
 			#print("depthLimit is 0")
+			#heuristic = self.state.computeHeuristic(state)
+			#heur.add(heuristic)
 			return self.state.computeHeuristic(state)
 
 		# update statistics for the search
@@ -289,7 +317,10 @@ class AiAgent:
 		v = math.inf
 		if len(actionList) == 0:
 			#print("actionList is 0")
+			#heuristic = self.state.computeHeuristic(state)
+			#heur.add(heuristic)
 			return self.state.computeHeuristic(state)
+
 		for state,moves in actionList:
 			next = self.maxValue(state, alpha, beta, depthLimit - 1)
 			
@@ -320,20 +351,21 @@ class Game:
 		remaining_playtime = f.readline().rstrip()
 		board = []
 		board_row = []
-		print(color)
+		#print(color)
 		for i in range(0,ROWS):
 			board.append([])
 			board_row = list(f.readline().rstrip())
 			for j in range(0,len(board_row)):
 				board[i].append(Piece(i,j,board_row[j]))
 		#print(board)
+		f.close()
 		if(game_type == 'GAME'):
 			remaining_playtime = self.determinetimeforthisplay(remaining_playtime)
 		self.playgame(board, color, remaining_playtime)
 
 	def playgame(self,board,color,remaining_playtime):
 		self.board = board
-		pprint(board)
+		#pprint(board)
 		if color == "BLACK" :
 			opponent_color = "WHITE"
 		else:
@@ -343,9 +375,12 @@ class Game:
 		#value, new_board = AiAgent().minimax(self.board,4,color,color,opponent_color)
 		max_player = AiAgent(self.board,color)
 		state = GameState(self.board,color,opponent_color)
-		next_move = max_player.get_best_next_move(state,5)
-		print(next_move)
+		next_move = max_player.get_best_next_move(state,6)
+		#print(next_move)
 		output = self.get_output_format(next_move)
+		f = open("output.txt","w+")
+		f.write(output)
+		f.close()
 		print(time.time() - self.start_time)
 	
 	def get_output_format(self,next_move):
@@ -360,7 +395,7 @@ class Game:
 			output = output + "E "
 		for i in range(0,len(next_move)):
 			if i%2 == 0 :
-				output += chr(next_move[i] + 97) + str(next_move[i+1]) + " "
+				output += chr(next_move[i+1] + 97) + str(8 - next_move[i]) + " "
 			if i%4 == 3 and i<(len(next_move) - 2):
 				output = output + "\n"
 				if is_jump:
