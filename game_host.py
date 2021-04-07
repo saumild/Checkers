@@ -48,7 +48,7 @@ if random.random() > 0.5:
 white = False
 print(f"Each player has {timep1:.2f} seconds to defeat other player.")
 print(f"{player1} has won the toss and is playing white.")
-if os.path.exists('playdata.txt'): os.remove('playdata.txt');
+if os.path.exists('playdata.txt'): os.remove('playdata.txt')
 
 game_states = dict()
 while True:

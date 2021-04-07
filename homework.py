@@ -7,7 +7,7 @@ ROWS, COLS = 8, 8
 BLACK = ['b','B']
 WHITE = ['w','W']
 EMPTY_SPOT = '.'
-#w1,w2,w3,w4 = int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
+w1,w2,w3,w4 = int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
 
 class Piece:
 
@@ -36,10 +36,7 @@ class Piece:
 
 
 class GameState:
-	def deepcopypickle(self, state):
-		return pickle.loads(pickle.dumps(state, -1))
-
-
+	
 	def __init__(self,board,color,opponent_color):
 		self.color = color
 		self.opponent_color = opponent_color
@@ -171,77 +168,103 @@ class GameState:
 		else:
 			 False,None
 
-	def computeHeuristic(self, state):
-		bp,wp,bkp,wkp,cbt,cwt,dbk,dwk,sbc,swc = self.get_evaluation_count_on_board(state)
+	def computeHeuristic(self, state):	
+		black_pawn,black_king,black_safe,white_pawn,white_king,white_safe = self.get_evaluation_count_on_board(state)
 		if self.color == "BLACK":
-			checkers_count = bp
-			checkers_king_count = bkp
-			opponent_checkers_count = wp
-			opponent_checkers_king_count = wkp
-			dist_checker_king = dbk
-			checkers_safe_count = sbc
-			opponent_safe_count = swc
-			checkers_triangle = cbt
-			opponent_checkers_triangle = cwt
+			return  (black_pawn - white_pawn)*w1 + (black_king - white_king)*w2
 		elif self.color == "WHITE":
-			checkers_count = wp
-			checkers_king_count = wkp
-			opponent_checkers_count = bp
-			opponent_checkers_king_count = bkp
-			dist_checker_king = dwk
-			checkers_safe_count = swc
-			opponent_safe_count = sbc
-			checkers_triangle = cwt
-			opponent_checkers_triangle = cbt
-		
-		heurisitic = (checkers_count - opponent_checkers_count)*15 + (checkers_king_count - opponent_checkers_king_count)*9+ (opponent_safe_count)*(-3) + (checkers_triangle)*6
-		return heurisitic
-
+			return	(white_pawn - black_pawn)*w1 + (white_king - black_king)*w2
 	def get_evaluation_count_on_board(self,state):
-		black_piece_count,white_piece_count = 0,0
-		black_piece__king_count,white_piece_king_count = 0,0
-		dist_to_become_white_king,dist_to_become_black_king = 0,0
-		count_safe_white_checker,count_safe_black_checker = 0,0
-		checkers_white_triangle,checkers_black_triangle = 0,0
-		board = state
+		black_pawn,white_pawn,black_king, white_king = 0,0,0,0
+		black_safe,white_safe = 0,0
 		for row in state:
 			for piece in row:
-				if piece.row >= 3 and piece.color == "BLACK":
-					checkers_black_triangle = checkers_black_triangle + 7
-				elif piece.color == "BLACK":
-					checkers_black_triangle = checkers_black_triangle + 5
-				elif piece.row < 3 and piece.color == "WHITE":
-					checkers_white_triangle = checkers_white_triangle + 7
-				elif piece.color == "WHITE":
-					checkers_white_triangle = checkers_white_triangle + 5
-				safe = False
-				if piece.row == 0 or piece.row == 7 or piece.col == 0 or piece.col == 7:
-				 	safe = True 
+				if piece.piece =='w':
+					white_pawn = white_pawn + 1 + (7-piece.row)
+				elif piece.piece == 'b':
+					black_pawn = black_pawn + 1 + piece.row
+				elif piece.piece == 'W':
+					white_king = white_king + 2 +(7- piece.row)
+				elif piece.piece == 'B':
+					black_king = black_king + 2 + piece.row
 
-				if piece.piece != EMPTY_SPOT:
-					if piece.piece == 'w':
-						white_piece_count = white_piece_count + 1
-						dist_to_become_white_king = dist_to_become_white_king + (piece.row)
-						if safe:
-						 	count_safe_white_checker += 1
+				if piece.color == "BLACK" and (piece.col == 0 or piece.col == 7):
+					black_safe = black_safe + 1
+				elif piece.color == "WHITE" and (piece.col == 0 or piece.col == 7):
+					white_safe = white_safe + 1
+		return black_pawn,black_king,black_safe,white_pawn,white_king,white_safe
 
-					elif piece.piece == 'b':
-						black_piece_count = black_piece_count + 1
-						dist_to_become_black_king = dist_to_become_black_king + (7 - piece.row)
-						if safe:
-						 	count_safe_black_checker += 1
+	# def computeHeuristic(self, state):
+	# 	bp,wp,bkp,wkp,cbt,cwt,dbk,dwk,sbc,swc = self.get_evaluation_count_on_board(state)
+	# 	if self.color == "BLACK":
+	# 		checkers_count = bp
+	# 		checkers_king_count = bkp
+	# 		opponent_checkers_count = wp
+	# 		opponent_checkers_king_count = wkp
+	# 		dist_checker_king = dbk
+	# 		checkers_safe_count = sbc
+	# 		opponent_safe_count = swc
+	# 		checkers_triangle = cbt
+	# 		opponent_checkers_triangle = cwt
+	# 	elif self.color == "WHITE":
+	# 		checkers_count = wp
+	# 		checkers_king_count = wkp
+	# 		opponent_checkers_count = bp
+	# 		opponent_checkers_king_count = bkp
+	# 		dist_checker_king = dwk
+	# 		checkers_safe_count = swc
+	# 		opponent_safe_count = sbc
+	# 		checkers_triangle = cwt
+	# 		opponent_checkers_triangle = cbt
+		
+	# 	heurisitic = (checkers_count - opponent_checkers_count)*4 + (checkers_king_count - opponent_checkers_king_count)*8 + (checkers_safe_count-opponent_safe_count)*3 + opponent_checkers_triangle*-3
+	# 	return heurisitic
 
-					elif piece.piece == 'W':
-						white_piece_king_count = white_piece_king_count + 1
-						if safe:
-							count_safe_white_checker += 1
+	# def get_evaluation_count_on_board(self,state):
+	# 	black_piece_count,white_piece_count = 0,0
+	# 	black_piece__king_count,white_piece_king_count = 0,0
+	# 	dist_to_become_white_king,dist_to_become_black_king = 0,0
+	# 	count_safe_white_checker,count_safe_black_checker = 0,0
+	# 	checkers_white_triangle,checkers_black_triangle = 0,0
+	# 	board = state
+	# 	for row in state:
+	# 		for piece in row:
+	# 			if piece.row >= 3 and piece.color == "BLACK":
+	# 				checkers_black_triangle = checkers_black_triangle
+	# 			elif piece.color == "BLACK" and piece.row<3:
+	# 				checkers_black_triangle = checkers_black_triangle
+	# 			elif piece.row < 3 and piece.color == "WHITE":
+	# 				checkers_white_triangle = checkers_white_triangle
+	# 			elif piece.color == "WHITE" and piece.row>=3:
+	# 				checkers_white_triangle = checkers_white_triangle
+	# 			safe = False
+	# 			if piece.row == 0 or piece.row == 7 or piece.col == 0 or piece.col == 7:
+	# 			 	safe = True 
 
-					elif piece.piece == 'B':
-						black_piece__king_count = black_piece__king_count + 1
-						if safe:
-							count_safe_black_checker += 1
+	# 			if piece.piece != EMPTY_SPOT:
+	# 				if piece.piece == 'w':
+	# 					white_piece_count = white_piece_count + 1
+	# 					dist_to_become_white_king = dist_to_become_white_king + (piece.row)
+	# 					if safe:
+	# 					 	count_safe_white_checker += 1
 
-		return black_piece_count, white_piece_count, black_piece__king_count, white_piece_king_count,checkers_black_triangle,checkers_white_triangle,dist_to_become_black_king,dist_to_become_white_king,count_safe_black_checker,count_safe_white_checker
+	# 				elif piece.piece == 'b':
+	# 					black_piece_count = black_piece_count + 1
+	# 					dist_to_become_black_king = dist_to_become_black_king + (7 - piece.row)
+	# 					if safe:
+	# 					 	count_safe_black_checker += 1
+
+	# 				elif piece.piece == 'W':
+	# 					white_piece_king_count = white_piece_king_count + 1
+	# 					if safe:
+	# 						count_safe_white_checker += 1
+
+	# 				elif piece.piece == 'B':
+	# 					black_piece__king_count = black_piece__king_count + 1
+	# 					if safe:
+	# 						count_safe_black_checker += 1
+
+	# 	return black_piece_count, white_piece_count, black_piece__king_count, white_piece_king_count,checkers_black_triangle,checkers_white_triangle,dist_to_become_black_king,dist_to_become_white_king,count_safe_black_checker,count_safe_white_checker
 
 class AiAgent:
 	def __init__(self,game,color):
@@ -277,7 +300,7 @@ class AiAgent:
 				# Keep track of the best move so far at the top level
 				if depthLimit == self.depthLimit:
 					self.best_move = move
-			elif next == v and depthLimit == self.depthLimit and random.random() > 0.75:
+			elif next == v and depthLimit == self.depthLimit and random.random() > 0.5:
 				self.best_move = move			
 			# alpha-beta max pruning
 			if v >= beta:
@@ -302,7 +325,7 @@ class AiAgent:
 			
 			if next < v:
 				v = next
-			
+				
 			#alpha-beta min pruning
 			if v <= alpha:
 				return v
@@ -319,8 +342,8 @@ class Game:
 		#print(w1,w2,w3,w4)
 
 	def inputs(self):
-		#f = open(sys.argv[1],"r")
-		f = open("input.txt","r")
+		f = open(sys.argv[5],"r")
+		#f = open("input.txt","r")
 		game_type = f.readline().rstrip()
 		color = f.readline().rstrip()
 		remaining_playtime = f.readline().rstrip()
@@ -345,13 +368,13 @@ class Game:
 		if game_type == "SINGLE":
 			depth = 1
 		else:
-			depth = 8
+			depth = 6
 		max_player = AiAgent(self.board,color)
 		state = GameState(self.board,color,opponent_color)
 		next_move = max_player.get_best_next_move(state,depth)
 		output = self.get_output_format(next_move)
-		#f = open(sys.argv[2],"w+")
-		f = open("output.txt","w+")
+		f = open(sys.argv[6],"w+")
+		#f = open("output.txt","w+")
 		f.write(output)
 		f.close()
 		# #print(time.process_time() - self.start_time)

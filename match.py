@@ -5,7 +5,7 @@ import os
 from time import time
 
 player1 = "homework.py"
-player2 = "mini_max.py"
+player2 = "homework.py"
 weight_file_name = "weights/%d.json"
 
 
