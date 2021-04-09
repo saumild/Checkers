@@ -3,12 +3,12 @@ import random
 import os
 from time import time, sleep
 
-player2 = "mini_max.py"
+player2 = "Mhomework.py"
 player1 = "homework.py"
 timep1 = timep2 = max(400, random.random() * 150)  # time will be between 100 and 150 seconds
 pieces1 = pieces2 = 12
 
-PAUSE = 0.2
+PAUSE = 0.8
 
 board = [
     [".", "b", ".", "b", ".", "b", ".", "b"],

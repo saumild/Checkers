@@ -4,6 +4,18 @@ import math
 EMPTY_SPOT = '.' 
 WHITE = ['w','W']
 BLACK = ['b','B']
+import time
+import os
+import math
+from random import shuffle
+import sys
+from copy import deepcopy
+ROWS, COLS = 8, 8
+BLACK = ['b','B']
+WHITE = ['w','W']
+EMPTY_SPOT = '.'
+#w1,w2,w3,w4 = int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
+
 class Piece:
 
 	def __init__(self, row, col, piece):
@@ -16,7 +28,7 @@ class Piece:
 			self.color = 'BLACK'
 		else:
 			self.color = EMPTY_SPOT
-		self.king = piece in ['B','W']
+		self.king = piece in ['B', 'W']
 		
 	def make_king(self):
 		self.king = True
@@ -31,22 +43,22 @@ class Piece:
 
 
 class GameState:
+	
 	def __init__(self,board,color,opponent_color):
-		self.board = deepcopy(board)
 		self.color = color
 		self.opponent_color = opponent_color
+		self.board = deepcopy(board)
 		
 
+	
 	def get_all_pieces(self,state,color):
 		pieces = []
-		#print(state)
 		for row in state:
 			for piece in row:
-				#print(type(piece))
 				if piece.piece != EMPTY_SPOT and piece.color == color:
 					pieces.append(piece)
 		return pieces
-		
+
 	def getActions(self,state,max_player):
 		if max_player:
 			playercolor = self.color
@@ -55,20 +67,10 @@ class GameState:
 			playercolor = self.opponent_color
 			coins = self.get_all_pieces(state,self.opponent_color)
 
-		if playercolor == "BLACK":
-			regularDirs = [[1, -1], [1, 1]]
-			captureDirs = [[2, -2], [2, 2]]
-		else:
-			regularDirs = [[-1, -1], [-1, 1]]
-			captureDirs = [[-2, -2], [-2, 2]]
-
 		regularMoves = []
 		captureMoves = []
 		for checker in coins:
-			if checker.king:
-				regularDirs = [[1, -1], [1, 1],[-1, -1], [-1, 1]]
-				captureDirs = [[2, -2], [2, 2],[-2, -2], [-2, 2]]
-
+			regularDirs,captureDirs = self.get_directions(checker.king,playercolor)
 			actions, flag = self.recursive_check(regularDirs,captureDirs,checker,state,playercolor)
 			# must take capture move if possible
 			if flag:
@@ -82,6 +84,23 @@ class GameState:
 		else:
 			return regularMoves,False
 
+	def get_directions(self,is_king,playercolor):
+		if is_king:
+			if playercolor == "BLACK":
+					regularDirs = [[1, -1], [1, 1],[-1, -1], [-1, 1]]
+					captureDirs = [[2, -2], [2, 2],[-2, -2], [-2, 2]]
+			elif playercolor == "WHITE":
+				regularDirs = [[-1, -1], [-1, 1],[1, -1], [1, 1]]
+				captureDirs = [[-2, -2], [-2, 2],[2, -2], [2, 2]]
+		else:
+			if playercolor == "BLACK":
+				regularDirs = [[1, -1], [1, 1]]
+				captureDirs = [[2, -2], [2, 2]]
+			elif playercolor == "WHITE":
+				regularDirs = [[-1, -1], [-1, 1]]
+				captureDirs = [[-2, -2], [-2, 2]]
+		return regularDirs,captureDirs
+
 	def recursive_check(self,regularDirs,captureDirs,checker,state,playercolor):
 		oldrow,oldcol = checker.row,checker.col
 		regularMoves = []
@@ -89,7 +108,10 @@ class GameState:
 		for dir in captureDirs:
 			is_Valid,new_state = self.isValidMove(oldrow, oldcol, oldrow+dir[0], oldcol+dir[1],state)
 			if is_Valid:
-				if not checker.king and ((oldrow+dir[0] == 7 and playercolor == "BLACK") or (oldrow+dir[0] == 0 and playercolor == "WHITE")):
+				if not checker.king and (( playercolor == "BLACK" and oldrow+dir[0] == 7)):
+					new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
+					captureMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
+				elif not checker.king and (( playercolor == "WHITE" and oldrow+dir[0] == 0)):
 					new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
 					captureMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
 				else:
@@ -104,7 +126,9 @@ class GameState:
 			for dir in regularDirs:
 				is_Valid,new_state = self.isValidMove(oldrow, oldcol, oldrow+dir[0], oldcol+dir[1],state)
 				if is_Valid:
-					if not checker.king and ((oldrow+dir[0] == 7 and playercolor == "BLACK") or (oldrow+dir[0] == 0 and playercolor == "WHITE")):
+					if not checker.king and ((playercolor == "BLACK" and oldrow+dir[0] == 7 )):
+						new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
+					elif not checker.king and ((playercolor == "WHITE" and oldrow+dir[0] == 0)):
 						new_state[oldrow+dir[0]][oldcol+dir[1]].make_king()
 					regularMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
 		# must take capture move if possible
@@ -128,6 +152,7 @@ class GameState:
 		abs_row_diff = abs(row_diff)
 		if abs_row_diff == 1:   # regular move
 			temp_board = deepcopy(state)
+
 			temp_piece = temp_board[oldrow][oldcol].piece
 			temp_board[oldrow][oldcol] = Piece(oldrow,oldcol,'.')
 			temp_board[row][col].piece = temp_piece
@@ -148,49 +173,81 @@ class GameState:
 		else:
 			 False,None
 
-	def computeUtilityValue(self, state):
-		# utility = (len(self.checkers) - len(self.opponent_heckers)) * 500 + len(self.checkers) * 50
-		return 1000
-
-	def computeHeuristic1(self, state):
-		bp,wp,bkp,wkp,x,y = self.get_evaluation_count_on_board(state)
+	def computeHeuristic1(self, state):	
+		black_pawn,black_king,black_safe,white_pawn,white_king,white_safe = self.get_evaluation_count_on_board(state)
+		heur = (black_pawn - white_pawn) + (black_king - white_king)
 		if self.color == "BLACK":
-			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = bp,bkp,wp,wkp
-		else:
-			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count = wp,wkp,bp,bkp
+			return heur + black_pawn*3
+		elif self.color == "WHITE":
+			return	(heur*-1) + white_pawn*3
 
-		heurisitic = (checkers_count - opponent_checkers_count) * 50 + (checkers_king_count - opponent_checkers_king_count) * 100 + checkers_count
-		return heurisitic
-
-	def computeHeuristic(self, state):
-		bp,wp,bkp,wkp,dbk,dwk = self.get_evaluation_count_on_board(state)
-		if self.color == "BLACK":
-			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count,dist_king = bp,bkp,wp,wkp,dbk
-		else:
-			checkers_count,checkers_king_count,opponent_checkers_count,opponent_checkers_king_count,dist_king = wp,wkp,bp,bkp,dwk
-			
-		heurisitic = (checkers_count - opponent_checkers_count) * 0.32 + (checkers_king_count - opponent_checkers_king_count) * 0.32*2 + dist_king*0.7
-		return heurisitic
+	def computeHeuristic(self,state):
+		black_pawn,black_king,white_pawn,white_king,black_protected,white_protected,white_can_be_killed,black_can_be_killed = self.get_evaluation_count_on_board(state)
+		
+		score = sum([
+        (white_pawn - black_pawn) * 12,
+        (white_king - black_king) * 15,
+        (white_can_be_killed - black_can_be_killed) * -3,
+        (white_protected - black_protected) * 9])
+		
+		return score if self.color == "WHITE" else -1*score
 
 	def get_evaluation_count_on_board(self,state):
-		black_piece_count,white_piece_count = 0,0
-		black_piece__king_count,white_piece_king_count = 0,0
-		dist_to_become_white_king,dist_to_become_black_king = 0,0
+		black_pawn,black_king,white_pawn,white_king = 0,0,0,0
+		black_protected,white_protected = 0,0
+		white_can_be_killed,black_can_be_killed = 0,0
 		for row in state:
 			for piece in row:
-				if piece.piece != EMPTY_SPOT:
-					if piece.piece == 'w':
-						white_piece_count = white_piece_count + 1
-						dist_to_become_white_king = dist_to_become_white_king + (piece.row)
-					elif piece.piece == 'b':
-						black_piece_count = black_piece_count + 1
-						dist_to_become_black_king = dist_to_become_black_king + (8 - piece.row)
-					elif piece.piece == 'W':
-						white_piece_king_count = white_piece_king_count + 1
-					elif piece.piece == 'B':
-						black_piece__king_count = black_piece__king_count + 1
-		return black_piece_count,white_piece_count,black_piece__king_count,white_piece_king_count,dist_to_become_black_king,dist_to_become_white_king
+				if piece.piece == '.':
+					continue
 
+				if piece.piece == 'w' or piece.piece == 'W':
+					if piece.king:
+						white_king += 1
+					else:
+						white_pawn += 1
+					# Protected
+					if piece.row < 7:
+						if piece.row == 0 or piece.col == 0 or piece.col == 7:
+							white_protected += 1
+						else:
+							try:
+								if (state[piece.row - 1][piece.col - 1].piece == 'b' or state[piece.row - 1][piece.col - 1].piece == 'B') and (state[piece.row + 1][piece.col + 1].piece == "."):
+									white_can_be_killed += 1
+								elif (state[piece.row - 1][piece.col - 1].piece == 'b' or state[piece.row - 1][piece.col + 1].piece == 'B') and (state[piece.row + 1][piece.col - 1].piece == "."):
+									white_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col - 1].piece == 'b' or state[piece.row + 1][piece.col - 1].piece == 'B') and state[piece.row + 1][piece.col - 1].king and state[piece.row - 1][piece.col + 1].piece == ".":
+									white_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'b' or state[piece.row + 1][piece.col + 1].piece == 'B') and state[piece.row + 1][piece.col + 1].king and state[piece.row - 1][piece.col - 1].piece == ".":
+									white_can_be_killed += 1
+								else:
+									white_protected += 1
+							except:
+								white_protected += 1
+				else:
+					if piece.king:
+						black_king += 1
+					else:
+						black_pawn += 1
+					# Protected
+					if piece.row > 0:
+						if piece.row == 7 or piece.col == 0 or piece.col == 7:
+							black_protected += 1
+						else:
+							try:
+								if (state[piece.row + 1][piece.col - 1].piece == 'w' or state[piece.row + 1][piece.col - 1].piece == 'W') and (state[piece.row - 1][piece.col + 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'w' or state[piece.row + 1][piece.col + 1].piece == 'W') and (state[piece.row - 1][piece.col - 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col - 1].piece == 'w' or state[piece.row + 1][piece.col - 1].piece == 'W') and state[piece.row + 1][piece.col - 1].king and (state[piece.row - 1][piece.col + 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'w' or state[piece.row + 1][piece.col + 1].piece == 'W') and state[piece.row + 1][piece.col + 1].king and (state[piece.row - 1][piece.col - 1].piece == '.'):
+									black_can_be_killed += 1
+								else:
+									black_protected += 1
+							except:
+								black_protected += 1	
+		return 	black_pawn,black_king,white_pawn,white_king,black_protected,white_protected,white_can_be_killed,black_can_be_killed
 
 class AiAgent:
 	def __init__(self,game,color):
@@ -205,26 +262,16 @@ class AiAgent:
 	def alpha_beta(self,state,depthLimit):
 		self.state = state
 		self.best_move = []
-		self.currentDepth = 0
-		self.maxDepth = 0
-		self.numNodes = 0
-		self.maxPruning = 0
-		self.minPruning = 0
 		self.depthLimit = depthLimit
-		v = self.maxValue(state.board, -10000000, 1000000, self.depthLimit)
+		v = self.maxValue(state.board, -math.inf, math.inf, self.depthLimit)
 		return self.best_move
 
 	def maxValue(self, state, alpha, beta, depthLimit):
-		heuristic = None
 		if depthLimit == 0:
 			return self.state.computeHeuristic(state)
-		self.currentDepth += 1
-		self.maxDepth = max(self.maxDepth, self.currentDepth)
 		
-		self.numNodes += 1
-
 		actionList = self.state.getActions(state,True)[0]
-
+		shuffle(actionList)
 		v = -math.inf
 		if len(actionList) == 0:
 			return self.state.computeHeuristic(state)
@@ -236,15 +283,12 @@ class AiAgent:
 				# Keep track of the best move so far at the top level
 				if depthLimit == self.depthLimit:
 					self.best_move = move
-			
+			elif next == v and depthLimit == self.depthLimit:
+				self.best_move = move			
 			# alpha-beta max pruning
 			if v >= beta:
-				self.maxPruning += 1
-				self.currentDepth -= 1
 				return v
 			alpha = max(alpha, v)
-
-		self.currentDepth -= 1
 
 		return v
 
@@ -253,10 +297,8 @@ class AiAgent:
 			return self.state.computeHeuristic(state)
 
 		# update statistics for the search
-		self.currentDepth += 1
-		self.maxDepth = max(self.maxDepth, self.currentDepth)
-		self.numNodes += 1
 		actionList = self.state.getActions(state,False)[0]
+		shuffle(actionList)
 		v = math.inf
 		if len(actionList) == 0:
 			return self.state.computeHeuristic(state)
@@ -266,17 +308,14 @@ class AiAgent:
 			
 			if next < v:
 				v = next
-			
+				
 			#alpha-beta min pruning
 			if v <= alpha:
-				self.minPruning += 1
-				self.currentDepth -= 1
 				return v
 			beta = min(beta, v)
 
-		self.currentDepth -= 1
 		return v
-
+		
 class calibrate:
 	def __init__(self):
 		self.color = "BLACK"
@@ -297,7 +336,7 @@ class calibrate:
 			for j in range(0,8):
 				board_row.append(Piece(i,j,board[i][j]))
 			self.board.append(board_row)
-		depth = [2,4,6,8]
+		depth = [1,2,3,4,5,6,7,8]
 		max_player = AiAgent(self.board,self.color)
 		state = GameState(self.board,self.color,self.opponent_color)
 		time1 = []
@@ -310,7 +349,7 @@ class calibrate:
 			if d != len(depth)-1:
 				 timestr = timestr + "," 
 		
-		f = open("calibrate.txt","w+")
+		f = open("calibration.txt","w+")
 		f.write(timestr)
 		f.close()
 		

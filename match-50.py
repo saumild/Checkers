@@ -4,7 +4,7 @@ import os
 from time import time
 
 player1 = "homework.py"
-player2 = "mini_max.py"
+player2 = "Mhomework.py"
 
 
 def run_game(args):
@@ -140,11 +140,14 @@ if __name__ == '__main__':
         pairs.append((i, player1, player2))
         # break
 
-    with Pool(processes=5) as pool:
+    with Pool(processes=1) as pool:
+        if os.path.exists('playdata.txt'): os.remove('playdata.txt')
         done = 0
         for _ in pool.imap_unordered(run_game, pairs):
             done += 1
             print("Done: %d" % done)
+            if os.path.exists('playdata.txt'): os.remove('playdata.txt')
+        
 
 # import json
 # data = json.load(open('csci561/hw2/weights.json'))

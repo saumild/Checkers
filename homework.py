@@ -1,13 +1,13 @@
 import time
+import os
 import math
-import random
+from random import shuffle
 import sys
 from copy import deepcopy
 ROWS, COLS = 8, 8
 BLACK = ['b','B']
 WHITE = ['w','W']
 EMPTY_SPOT = '.'
-w1,w2,w3,w4 = int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3]),int(sys.argv[4])
 
 class Piece:
 
@@ -98,7 +98,6 @@ class GameState:
 		oldrow,oldcol = checker.row,checker.col
 		regularMoves = []
 		captureMoves = []
-		#random.shuffle(captureDirs)
 		for dir in captureDirs:
 			is_Valid,new_state = self.isValidMove(oldrow, oldcol, oldrow+dir[0], oldcol+dir[1],state)
 			if is_Valid:
@@ -117,7 +116,6 @@ class GameState:
 					else:
 						captureMoves.append((new_state, [oldrow, oldcol, oldrow+dir[0], oldcol+dir[1]]))
 		if not captureMoves:
-			#random.shuffle(regularDirs)
 			for dir in regularDirs:
 				is_Valid,new_state = self.isValidMove(oldrow, oldcol, oldrow+dir[0], oldcol+dir[1],state)
 				if is_Valid:
@@ -168,103 +166,69 @@ class GameState:
 		else:
 			 False,None
 
-	def computeHeuristic(self, state):	
-		black_pawn,black_king,black_safe,white_pawn,white_king,white_safe = self.get_evaluation_count_on_board(state)
-		if self.color == "BLACK":
-			return  (black_pawn - white_pawn)*w1 + (black_king - white_king)*w2
-		elif self.color == "WHITE":
-			return	(white_pawn - black_pawn)*w1 + (white_king - black_king)*w2
+	def computeHeuristic(self,state):
+		black_pawn,black_king,white_pawn,white_king,black_protected,white_protected,white_can_be_killed,black_can_be_killed = self.get_evaluation_count_on_board(state)
+		
+		heuristic = (white_pawn - black_pawn) * 12+(white_king - black_king) * 15+(white_can_be_killed - black_can_be_killed) * -3 + (white_protected - black_protected) * 9
+		
+		return heuristic if self.color == "WHITE" else -1*heuristic
+
 	def get_evaluation_count_on_board(self,state):
-		black_pawn,white_pawn,black_king, white_king = 0,0,0,0
-		black_safe,white_safe = 0,0
+		black_pawn,black_king,white_pawn,white_king = 0,0,0,0
+		black_protected,white_protected = 0,0
+		white_can_be_killed,black_can_be_killed = 0,0
 		for row in state:
 			for piece in row:
-				if piece.piece =='w':
-					white_pawn = white_pawn + 1 + (7-piece.row)
-				elif piece.piece == 'b':
-					black_pawn = black_pawn + 1 + piece.row
-				elif piece.piece == 'W':
-					white_king = white_king + 2 +(7- piece.row)
-				elif piece.piece == 'B':
-					black_king = black_king + 2 + piece.row
+				if piece.piece == '.':
+					continue
 
-				if piece.color == "BLACK" and (piece.col == 0 or piece.col == 7):
-					black_safe = black_safe + 1
-				elif piece.color == "WHITE" and (piece.col == 0 or piece.col == 7):
-					white_safe = white_safe + 1
-		return black_pawn,black_king,black_safe,white_pawn,white_king,white_safe
-
-	# def computeHeuristic(self, state):
-	# 	bp,wp,bkp,wkp,cbt,cwt,dbk,dwk,sbc,swc = self.get_evaluation_count_on_board(state)
-	# 	if self.color == "BLACK":
-	# 		checkers_count = bp
-	# 		checkers_king_count = bkp
-	# 		opponent_checkers_count = wp
-	# 		opponent_checkers_king_count = wkp
-	# 		dist_checker_king = dbk
-	# 		checkers_safe_count = sbc
-	# 		opponent_safe_count = swc
-	# 		checkers_triangle = cbt
-	# 		opponent_checkers_triangle = cwt
-	# 	elif self.color == "WHITE":
-	# 		checkers_count = wp
-	# 		checkers_king_count = wkp
-	# 		opponent_checkers_count = bp
-	# 		opponent_checkers_king_count = bkp
-	# 		dist_checker_king = dwk
-	# 		checkers_safe_count = swc
-	# 		opponent_safe_count = sbc
-	# 		checkers_triangle = cwt
-	# 		opponent_checkers_triangle = cbt
-		
-	# 	heurisitic = (checkers_count - opponent_checkers_count)*4 + (checkers_king_count - opponent_checkers_king_count)*8 + (checkers_safe_count-opponent_safe_count)*3 + opponent_checkers_triangle*-3
-	# 	return heurisitic
-
-	# def get_evaluation_count_on_board(self,state):
-	# 	black_piece_count,white_piece_count = 0,0
-	# 	black_piece__king_count,white_piece_king_count = 0,0
-	# 	dist_to_become_white_king,dist_to_become_black_king = 0,0
-	# 	count_safe_white_checker,count_safe_black_checker = 0,0
-	# 	checkers_white_triangle,checkers_black_triangle = 0,0
-	# 	board = state
-	# 	for row in state:
-	# 		for piece in row:
-	# 			if piece.row >= 3 and piece.color == "BLACK":
-	# 				checkers_black_triangle = checkers_black_triangle
-	# 			elif piece.color == "BLACK" and piece.row<3:
-	# 				checkers_black_triangle = checkers_black_triangle
-	# 			elif piece.row < 3 and piece.color == "WHITE":
-	# 				checkers_white_triangle = checkers_white_triangle
-	# 			elif piece.color == "WHITE" and piece.row>=3:
-	# 				checkers_white_triangle = checkers_white_triangle
-	# 			safe = False
-	# 			if piece.row == 0 or piece.row == 7 or piece.col == 0 or piece.col == 7:
-	# 			 	safe = True 
-
-	# 			if piece.piece != EMPTY_SPOT:
-	# 				if piece.piece == 'w':
-	# 					white_piece_count = white_piece_count + 1
-	# 					dist_to_become_white_king = dist_to_become_white_king + (piece.row)
-	# 					if safe:
-	# 					 	count_safe_white_checker += 1
-
-	# 				elif piece.piece == 'b':
-	# 					black_piece_count = black_piece_count + 1
-	# 					dist_to_become_black_king = dist_to_become_black_king + (7 - piece.row)
-	# 					if safe:
-	# 					 	count_safe_black_checker += 1
-
-	# 				elif piece.piece == 'W':
-	# 					white_piece_king_count = white_piece_king_count + 1
-	# 					if safe:
-	# 						count_safe_white_checker += 1
-
-	# 				elif piece.piece == 'B':
-	# 					black_piece__king_count = black_piece__king_count + 1
-	# 					if safe:
-	# 						count_safe_black_checker += 1
-
-	# 	return black_piece_count, white_piece_count, black_piece__king_count, white_piece_king_count,checkers_black_triangle,checkers_white_triangle,dist_to_become_black_king,dist_to_become_white_king,count_safe_black_checker,count_safe_white_checker
+				if piece.piece == 'w' or piece.piece == 'W':
+					if piece.king:
+						white_king += 1
+					else:
+						white_pawn += 1
+					# Protected
+					if piece.row < 7:
+						if piece.row == 0 or piece.col == 0 or piece.col == 7:
+							white_protected += 1
+						else:
+							try:
+								if (state[piece.row - 1][piece.col - 1].piece == 'b' or state[piece.row - 1][piece.col - 1].piece == 'B') and (state[piece.row + 1][piece.col + 1].piece == "."):
+									white_can_be_killed += 1
+								elif (state[piece.row - 1][piece.col - 1].piece == 'b' or state[piece.row - 1][piece.col + 1].piece == 'B') and (state[piece.row + 1][piece.col - 1].piece == "."):
+									white_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col - 1].piece == 'b' or state[piece.row + 1][piece.col - 1].piece == 'B') and state[piece.row + 1][piece.col - 1].king and state[piece.row - 1][piece.col + 1].piece == ".":
+									white_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'b' or state[piece.row + 1][piece.col + 1].piece == 'B') and state[piece.row + 1][piece.col + 1].king and state[piece.row - 1][piece.col - 1].piece == ".":
+									white_can_be_killed += 1
+								else:
+									white_protected += 1
+							except:
+								white_protected += 1
+				else:
+					if piece.king:
+						black_king += 1
+					else:
+						black_pawn += 1
+					# Protected
+					if piece.row > 0:
+						if piece.row == 7 or piece.col == 0 or piece.col == 7:
+							black_protected += 1
+						else:
+							try:
+								if (state[piece.row + 1][piece.col - 1].piece == 'w' or state[piece.row + 1][piece.col - 1].piece == 'W') and (state[piece.row - 1][piece.col + 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'w' or state[piece.row + 1][piece.col + 1].piece == 'W') and (state[piece.row - 1][piece.col - 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col - 1].piece == 'w' or state[piece.row + 1][piece.col - 1].piece == 'W') and state[piece.row + 1][piece.col - 1].king and (state[piece.row - 1][piece.col + 1].piece == '.'):
+									black_can_be_killed += 1
+								elif (state[piece.row + 1][piece.col + 1].piece == 'w' or state[piece.row + 1][piece.col + 1].piece == 'W') and state[piece.row + 1][piece.col + 1].king and (state[piece.row - 1][piece.col - 1].piece == '.'):
+									black_can_be_killed += 1
+								else:
+									black_protected += 1
+							except:
+								black_protected += 1	
+		return 	black_pawn,black_king,white_pawn,white_king,black_protected,white_protected,white_can_be_killed,black_can_be_killed
 
 class AiAgent:
 	def __init__(self,game,color):
@@ -288,7 +252,7 @@ class AiAgent:
 			return self.state.computeHeuristic(state)
 		
 		actionList = self.state.getActions(state,True)[0]
-		random.shuffle(actionList)
+		shuffle(actionList)
 		v = -math.inf
 		if len(actionList) == 0:
 			return self.state.computeHeuristic(state)
@@ -300,7 +264,7 @@ class AiAgent:
 				# Keep track of the best move so far at the top level
 				if depthLimit == self.depthLimit:
 					self.best_move = move
-			elif next == v and depthLimit == self.depthLimit and random.random() > 0.5:
+			elif next == v and depthLimit == self.depthLimit:
 				self.best_move = move			
 			# alpha-beta max pruning
 			if v >= beta:
@@ -313,9 +277,8 @@ class AiAgent:
 		if depthLimit == 0:
 			return self.state.computeHeuristic(state)
 
-		# update statistics for the search
 		actionList = self.state.getActions(state,False)[0]
-		#random.shuffle(actionList)
+		shuffle(actionList)
 		v = math.inf
 		if len(actionList) == 0:
 			return self.state.computeHeuristic(state)
@@ -338,12 +301,9 @@ class Game:
 	def __init__(self):
 		self.start_time = time.process_time()
 		self.inputs()
-		#p1,w1,w2,w3,w4,inp,op = args
-		#print(w1,w2,w3,w4)
-
+		
 	def inputs(self):
-		f = open(sys.argv[5],"r")
-		#f = open("input.txt","r")
+		f = open("input.txt","r")
 		game_type = f.readline().rstrip()
 		color = f.readline().rstrip()
 		remaining_playtime = f.readline().rstrip()
@@ -359,55 +319,49 @@ class Game:
 
 	def playgame(self,board,color,remaining_playtime,game_type):
 		self.board = board
-		#pprint(board)
+		nummovesleft = 100
 		if color == "BLACK" :
 			opponent_color = "WHITE"
 		elif color == "WHITE":
 			opponent_color = "BLACK"
+		if os.path.exists('playdata.txt'):
+			nummovesleft = open("playdata.txt","r").readline()
 
+		if not isinstance(nummovesleft,int):	
+			nummovesleft = int(nummovesleft)
+		if nummovesleft !=0:
+			depthTiming = float(remaining_playtime)//nummovesleft
+		else:
+			depthTiming = 10
+		f = open("calibration.txt","r")
+		depthTL = f.readline().rstrip().split(",")
+		f.close()
+		depth = 5
+		final_depth = 1000
+		for i in range(1,len(depthTL)):
+			if depthTiming < float(depthTL[i]):
+				#print("i",i)
+				final_depth = i-1
+				break
+			else:
+				final_depth = 8
 		if game_type == "SINGLE":
 			depth = 1
-		else:
-			depth = 6
+		elif final_depth != 1000:
+				depth = final_depth
+	
 		max_player = AiAgent(self.board,color)
 		state = GameState(self.board,color,opponent_color)
 		next_move = max_player.get_best_next_move(state,depth)
 		output = self.get_output_format(next_move)
-		f = open(sys.argv[6],"w+")
-		#f = open("output.txt","w+")
+		f = open("output.txt","w+")
 		f.write(output)
 		f.close()
-		# #print(time.process_time() - self.start_time)
-	
-	def make_move(self,next_move,board):
-		for i in range(0,len(next_move),4):
-			if i % 4 == 0:
-				row_diff = (next_move[0] - next_move[2])
-				if abs(row_diff) == 2:
-					row_diff = row_diff // 2
-					col_diff = (next_move[1] - next_move[3]) // 2		
-				
-					temp_piece = self.board[next_move[i]][next_move[i]].piece
-					self.board[next_move[i]][next_move[i+1]] = Piece(next_move[i],next_move[i],'.')
-					self.board[next_move[i]+row_diff][next_move[i+1]+col_diff].piece = '.' 
-					self.board[next_move[i+2]][next_move[i+3]].piece = temp_piece
-				else:
-				#print(next_move)
-					temp_piece = self.board[next_move[i]][next_move[i+1]].piece
-					self.board[next_move[i]][next_move[i+1]] = Piece(next_move[i],next_move[i+1],'.')
-					self.board[next_move[i+2]][next_move[i+3]].piece = temp_piece 
-		output = ""
-		for i in range(0,ROWS):
-			board_row = self.board[i]
-			for j in range(0,len(board_row)):
-				output = output + str(self.board[i][j])
-			output = output + "\n"
-		#print(type(output))
-		f = open("output.txt","w+")
-		f.write(output.strip())
+		f = open("playdata.txt","w")
+		nummovesleft = nummovesleft - 1
+		f.write(str(nummovesleft))
 		f.close()
 		
-		# print(board)
 	def get_output_format(self,next_move):
 		output = ""
 		if next_move:
@@ -430,7 +384,6 @@ class Game:
 						output = output + "J "
 					else:
 						output = output + "E "
-		#print(output)
 		return output.strip()
 
 c = Game()

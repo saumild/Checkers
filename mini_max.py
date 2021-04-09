@@ -82,7 +82,7 @@ def evaluate(maxs, mins):
     return len(maxs) - len(mins)
 
 
-CUTTOFF_THRESHOLD = 5
+CUTTOFF_THRESHOLD = 2
 OPT_ACTION = None
 
 
